@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+	"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ssafy.vue.model.mapper.HouseMapMapper">
+
+	<select id="getSido" resultType="sidoGugunDongDto">
+		select left(sidoCode,2) sidoCode, sidoName
+		from sidocode
+		order by sidoCode
+	</select>
+	
+	<select id="getGugunInSido" parameterType="string" resultType="sidoGugunDongDto">
+		select left(gugunCode,5) gugunCode, gugunName
+		from guguncode
+		where left(gugunCode,2) = #{sido}
+		order by gugunCode
+	</select>
+	
+	<select id="getDongInGugun" parameterType="string" resultType="houseInfoDto">
+		select distinct dongName, dongCode
+		from houseinfo
+		where left(dongCode, 5) = #{gugun}
+		order by dongName
+	</select>
+	
+	<select id="getAptInDong" parameterType="string" resultType="houseInfoDto">
+		select h.aptCode, h.aptName, h.buildyear, h.dongCode, h.dongName, h.jibun, h.lat, h.lng, si.sidoname, gu.gugunname,
+				(select dealAmount from housedeal where aptCode = h.aptCode and no = (select max(no) from housedeal where aptCode = h.aptCode)) recentPrice
+		from houseinfo h
+		left join sidocode si
+		on left(h.dongcode,2) = left(si.sidocode,2)
+		left join guguncode gu
+		on left(h.dongcode,5) = left(gu.guguncode,5)
+		where dongCode = #{dong} 
+		order by aptName
+	</select>
+	
+	<select id="getHouseDeal" parameterType="map" resultType="DealInfoDto">
+		select hi.aptCode, hi.aptName, hi.dongCode, hd.dealAmount, hd.dealYear, hd.dealMonth, hd.dealDay, hd.area, hd.floor
+		from houseinfo as hi left join housedeal as hd
+		on hi.aptCode = hd.aptCode
+		where hi.dongCode = #{dongcode} and
+		hi.aptName = #{aptname}
+		order by hi.aptCode desc
+	</select>
+	
+	<insert id="setFavArea" parameterType="map">
+		insert into favoritearea (userid, dongCode, regtime)
+		values (#{userid}, #{dongcode}, now())
+	</insert>
+	
+	<select id="getFavArea" parameterType="string" resultType="FavAreaDto">
+		select si.sidoName, gu.gugunName, do.dongName, f.dongCode, f.userid, f.regtime
+		  from favoritearea f
+		  left join sidocode si
+		  on left(f.dongCode, 2) = left(si.sidocode,2)
+		  left join guguncode gu
+		  on left(f.dongcode,5) = left(gu.guguncode,5)
+		  left join dongcode do
+		  on left(f.dongcode,10) = left(do.dongcode,10)
+		  where f.userid = #{userid}
+		  order by f.regtime desc
+	</select>
+	
+	<delete id="delFavArea" parameterType="map">
+		delete from favoritearea
+		where userid = #{userid} and
+		dongCode = #{dongcode}
+	</delete>
+	
+	<select id="getTopFavArea" resultType="FavAreaDto">
+		select si.sidoName, gu.gugunName, do.dongName, f.dongCode, f.regtime, COUNT(f.dongCode) as favCnt
+		  from favoritearea f
+		  left join sidocode si
+		  on left(f.dongCode, 2) = left(si.sidocode,2)
+		  left join guguncode gu
+		  on left(f.dongcode,5) = left(gu.guguncode,5)
+		  left join dongcode do
+		  on left(f.dongcode,10) = left(do.dongcode,10)
+		  group by f.dongcode order by favCnt desc limit 5
+	</select>
+</mapper>
